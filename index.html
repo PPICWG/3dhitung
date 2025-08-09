@@ -4,1193 +4,585 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hitung Kontainer - WKB 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #3b82f6;
-            --primary-dark: #1d4ed8;
-            --primary-light: #93c5fd;
-            --secondary: #10b981;
-            --danger: #ef4444;
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #a855f7;
+            --secondary-dark: #9333ea;
+            --accent: #ec4899;
+            --success: #10b981;
             --warning: #f59e0b;
-            --info: #06b6d4;
-            --dark: #1e293b;
+            --danger: #ef4444;
             --light: #f8fafc;
-            --gray: #94a3b8;
-            --gray-dark: #64748b;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+            --dark: #1e293b;
+            --gray: #64748b;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            background: linear-gradient(145deg, #0f172a, #1e293b);
             min-height: 100vh;
-            color: var(--dark);
-            line-height: 1.6;
+            color: var(--light);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
-        .main-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.15) 0%, transparent 30%),
+                radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.15) 0%, transparent 30%);
+            pointer-events: none;
+            z-index: -1;
         }
 
-        /* Header Styles */
-        .header-section {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .header-section h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .subtitle {
-            font-size: 1.1rem;
-            color: var(--gray-dark);
-            margin-bottom: 1.5rem;
-        }
-
-        .badge-container {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-            margin-top: 1rem;
-        }
-
-        .badge {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 999px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Content Grid */
-        .content-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 2rem;
-        }
-
-        @media (min-width: 1024px) {
-            .content-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        /* Card Styles */
         .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 1.5rem;
-            transition: all 0.3s ease;
+            box-shadow: 
+                0 4px 30px rgba(0, 0, 0, 0.1),
+                0 10px 20px -5px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .glass-card:hover {
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            transform: translateY(-2px);
+            transform: translateY(-4px);
+            box-shadow: 
+                0 8px 40px rgba(0, 0, 0, 0.2),
+                0 15px 30px -5px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
         }
 
-        .section-header {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--dark);
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% 200%;
+            animation: gradientShift 8s ease infinite;
         }
 
-        /* Input Panel Styles */
-        .input-group {
-            margin-bottom: 1.5rem;
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        .input-title {
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin-bottom: 0.8rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            color: var(--dark);
-        }
-
-        .icon-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-
-        .bg-blue {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: var(--primary);
-        }
-
-        .bg-green {
-            background-color: rgba(16, 185, 129, 0.2);
-            color: var(--secondary);
-        }
-
-        .bg-purple {
-            background-color: rgba(139, 92, 246, 0.2);
-            color: #8b5cf6;
-        }
-
-        .bg-orange {
-            background-color: rgba(249, 115, 22, 0.2);
-            color: #f97316;
-        }
-
-        /* Volume Display */
-        .volume-display {
-            cursor: pointer;
-            padding: 1rem;
-            text-align: center;
-            margin-bottom: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .volume-display:hover {
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        #containerVolume {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 0.3rem;
-        }
-
-        .volume-label {
-            font-size: 0.9rem;
-            color: var(--gray-dark);
-            margin-bottom: 0.5rem;
-        }
-
-        .volume-hint {
-            font-size: 0.8rem;
-            color: var(--gray);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.3rem;
-        }
-
-        .chevron {
-            width: 16px;
-            height: 16px;
-            fill: var(--gray);
-        }
-
-        /* Dimension Inputs */
-        .dimension-inputs {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .dimension-input {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .dimension-input label {
-            font-size: 0.9rem;
-            color: var(--gray-dark);
-            margin-bottom: 0.3rem;
-        }
-
-        .dimension-input input {
-            padding: 0.7rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-            background: rgba(255, 255, 255, 0.7);
-        }
-
-        .dimension-input input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-
-        /* Pattern Grid */
-        .pattern-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-        }
-
-        @media (min-width: 768px) {
-            .pattern-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        .pattern-option {
-            cursor: pointer;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .pattern-option:hover {
-            border-color: var(--primary-light);
-            background: rgba(59, 130, 246, 0.05);
-        }
-
-        .pattern-option input[type="radio"] {
-            display: none;
-        }
-
-        .pattern-option input[type="radio"]:checked + .pattern-content {
-            border-color: var(--primary);
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        .pattern-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-            text-align: center;
-        }
-
-        .pattern-icon {
-            font-size: 1.8rem;
-            margin-bottom: 0.3rem;
-        }
-
-        .pattern-name {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        .pattern-desc {
-            font-size: 0.8rem;
-            color: var(--gray-dark);
-        }
-
-        /* Option List */
-        .option-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .option-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.8rem;
-            cursor: pointer;
-        }
-
-        .option-item input[type="checkbox"] {
-            margin-top: 0.2rem;
-            accent-color: var(--primary);
-        }
-
-        .option-content {
-            flex: 1;
-        }
-
-        .option-name {
-            font-weight: 500;
-            color: var(--dark);
-        }
-
-        .option-desc {
-            font-size: 0.85rem;
-            color: var(--gray-dark);
-        }
-
-        /* Calculate Button */
-        .calculate-btn {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+        .gradient-button {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             border: none;
             border-radius: 12px;
-            font-size: 1rem;
+            padding: 14px 28px;
             font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.8rem;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
+            letter-spacing: 0.5px;
+            font-size: 0.95rem;
+            box-shadow: 
+                0 4px 15px rgba(99, 102, 241, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
-        .calculate-btn:hover {
-            background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+        .gradient-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            box-shadow: 
+                0 8px 25px rgba(99, 102, 241, 0.4),
+                0 5px 10px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.25);
         }
 
-        .calc-icon {
-            width: 20px;
-            height: 20px;
-            fill: white;
+        .gradient-button:active {
+            transform: translateY(0);
         }
 
-        /* Results Panel */
-        .results-container {
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
+        .section-header {
+            position: relative;
+            padding-left: 24px;
         }
 
-        .empty-state {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 2rem;
-            color: var(--gray-dark);
+        .section-header::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 28px;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 3px;
         }
 
-        .empty-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .empty-text {
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-
-        .empty-subtext {
-            font-size: 0.9rem;
-            max-width: 300px;
-        }
-
-        /* Result Cards */
-        .result-card {
-            background: rgba(255, 255, 255, 0.9);
+        .input-field {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .result-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .result-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .result-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .result-label {
-            font-size: 0.9rem;
-            color: var(--gray-dark);
-        }
-
-        /* Result Details */
-        .result-details {
-            margin-top: 2rem;
-        }
-
-        .details-header {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        @media (min-width: 768px) {
-            .details-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .detail-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.8rem 0;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .detail-label {
-            font-weight: 500;
-            color: var(--gray-dark);
-        }
-
-        .detail-value {
-            font-weight: 600;
-            color: var(--dark);
-        }
-
-        /* Visualization Panel */
-        .visualization-panel {
-            margin-top: 2rem;
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .visualization-toggle {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .visualization-toggle:hover {
-            background: rgba(59, 130, 246, 0.2);
-        }
-
-        /* Control Panels */
-        .control-panel {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        .controls-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .controls-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--dark);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .controls-icon {
-            font-size: 1.2rem;
-        }
-
-        .toggle-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--gray-dark);
-            cursor: pointer;
-        }
-
-        .info-box {
-            background: rgba(59, 130, 246, 0.1);
-            border-left: 3px solid var(--primary);
-            padding: 0.8rem;
-            border-radius: 0 8px 8px 0;
-            font-size: 0.85rem;
-            margin-bottom: 1rem;
-            color: var(--dark);
-        }
-
-        /* Layer Tabs */
-        .layer-tabs {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .layer-tab {
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.7);
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .layer-tab:hover {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: var(--primary-light);
-        }
-
-        .layer-tab.active {
-            background: var(--primary);
+            padding: 12px 16px;
             color: white;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 
+                inset 0 1px 3px rgba(0, 0, 0, 0.2),
+                0 0 0 3px rgba(99, 102, 241, 0.2);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .radio-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        .radio-card:hover {
+            border-color: var(--primary);
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.2);
+        }
+
+        .radio-card input:checked + .radio-content {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
             border-color: var(--primary);
         }
 
-        /* Layer Slider */
-        .layer-slider-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .layer-slider-container label {
-            font-size: 0.9rem;
-            color: var(--gray-dark);
-            min-width: 50px;
-        }
-
-        .layer-slider-container input[type="range"] {
-            flex: 1;
-            height: 6px;
-            -webkit-appearance: none;
-            background: #e2e8f0;
-            border-radius: 3px;
-            outline: none;
-        }
-
-        .layer-slider-container input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .layer-slider-container input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        .layer-slider-container span {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--dark);
-            min-width: 50px;
-            text-align: center;
-        }
-
-        /* Controls Grid */
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-        }
-
-        @media (min-width: 768px) {
-            .controls-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .control-btn {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: fit-content;
-        }
-
-        .control-btn:hover {
-            background: rgba(59, 130, 246, 0.2);
-        }
-
-        .control-icon {
-            width: 16px;
-            height: 16px;
-            fill: var(--primary-dark);
-        }
-
-        /* Slider Control */
-        .slider-control {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .slider-control label {
-            font-size: 0.9rem;
-            color: var(--gray-dark);
-            min-width: 70px;
-        }
-
-        .slider-control input[type="range"] {
-            flex: 1;
-            height: 6px;
-            -webkit-appearance: none;
-            background: #e2e8f0;
-            border-radius: 3px;
-            outline: none;
-        }
-
-        .slider-control input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--primary);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .slider-control input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
-
-        .slider-control span {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--dark);
-            min-width: 30px;
-            text-align: center;
-        }
-
-        /* Visualization Container */
         .visualization-container {
-            min-height: 500px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 12px;
+            border-radius: 20px;
             overflow: hidden;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(145deg, #0f172a, #1e293b);
             position: relative;
         }
 
-        .empty-visualization {
-            text-align: center;
-            padding: 2rem;
-            color: var(--gray-dark);
+        .control-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.2);
         }
 
-        /* 3D Container */
-        .threejs-container {
-            width: 100%;
-            height: 600px;
-            display: none;
-            position: relative;
+        .control-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #e2e8f0, #cbd5e1);
+            outline: none;
+        }
+
+        .control-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .visualization-mode-toggle {
+            background: linear-gradient(135deg, var(--success), #059669);
+            transition: all 0.3s ease;
             border-radius: 12px;
-            overflow: hidden;
+            padding: 12px 20px;
+            color: white;
+            font-weight: 600;
         }
 
-        /* Loading States */
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(59, 130, 246, 0.2);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        .jiffy-progress-bar {
-            width: 0;
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
-            border-radius: 999px;
-            animation: progress 2s ease-in-out forwards;
-        }
-
-        .jiffy-loading-dots {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .jiffy-loading-dots span {
-            width: 8px;
-            height: 8px;
-            background: var(--gray);
-            border-radius: 50%;
-            animation: bounce 1.4s infinite ease-in-out;
-        }
-
-        .jiffy-loading-dots span:nth-child(1) {
-            animation-delay: -0.32s;
-        }
-
-        .jiffy-loading-dots span:nth-child(2) {
-            animation-delay: -0.16s;
+        .visualization-mode-toggle:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
         }
 
         /* Animations */
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes jiffyBounce {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            50% { transform: scale(1.05) rotate(5deg); }
+            70% { transform: scale(0.9) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
 
-        @keyframes progress {
-            0% { width: 0; }
-            100% { width: 100%; }
+        @keyframes jiffySlideUp {
+            0% { transform: translateY(50px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
         }
 
-        @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
+        @keyframes jiffyFadeIn {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
         }
 
-        /* Jiffy Animations */
-        .jiffy-fade-in {
-            animation: fadeIn 0.5s ease-in-out forwards;
-        }
-
-        .jiffy-slide-up {
-            animation: slideUp 0.5s ease-out forwards;
-        }
-
-        .jiffy-zoom-in {
-            animation: zoomIn 0.3s ease-out forwards;
+        @keyframes jiffyPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .jiffy-bounce {
-            animation: bounceIn 0.6s ease-out forwards;
+            animation: jiffyBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .jiffy-slide-up {
+            animation: jiffySlideUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .jiffy-fade-in {
+            animation: jiffyFadeIn 1s ease-out;
         }
 
         .jiffy-pulse {
-            animation: pulse 2s infinite;
+            animation: jiffyPulse 2s infinite;
         }
 
         .jiffy-hover-lift {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
         .jiffy-hover-lift:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.2);
         }
 
-        .jiffy-stagger-1 {
-            animation-delay: 0.1s;
+        .jiffy-button-press {
+            transition: all 0.1s ease;
         }
 
-        .jiffy-stagger-2 {
-            animation-delay: 0.2s;
+        .jiffy-button-press:active {
+            transform: scale(0.95);
         }
 
-        .jiffy-stagger-3 {
-            animation-delay: 0.3s;
+        .jiffy-zoom-in {
+            animation: jiffyZoomIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        .jiffy-stagger-4 {
-            animation-delay: 0.4s;
-        }
-
-        .jiffy-elastic {
-            animation: elastic 0.8s ease-out forwards;
-        }
-
-        .jiffy-fade-out {
-            animation: fadeOut 0.3s ease-out forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes zoomIn {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes bounceIn {
-            0% { transform: scale(0.95); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        @keyframes elastic {
-            0% { transform: scale(0.95); opacity: 0; }
-            60% { transform: scale(1.05); }
-            80% { transform: scale(0.98); }
+        @keyframes jiffyZoomIn {
+            0% { transform: scale(0); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
 
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+        .jiffy-elastic {
+            animation: jiffyElastic 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
-        /* Alert Styles */
-        .jiffy-alert {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 1rem 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            max-width: 90%;
+        @keyframes jiffyElastic {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
         }
 
-        .jiffy-alert.success {
-            border-left: 4px solid var(--secondary);
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .jiffy-alert.error {
-            border-left: 4px solid var(--danger);
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        .jiffy-alert.warning {
-            border-left: 4px solid var(--warning);
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .jiffy-alert.info {
-            border-left: 4px solid var(--info);
-            background: rgba(6, 182, 212, 0.1);
-        }
-
-        /* Gradient Text */
-        .gradient-text {
-            background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        /* Hidden Utility */
-        .hidden {
-            display: none !important;
-        }
+        .jiffy-stagger-1 { animation-delay: 0.1s; }
+        .jiffy-stagger-2 { animation-delay: 0.2s; }
+        .jiffy-stagger-3 { animation-delay: 0.3s; }
+        .jiffy-stagger-4 { animation-delay: 0.4s; }
+        .jiffy-stagger-5 { animation-delay: 0.5s; }
     </style>
 </head>
 <body>
-    <div class="main-container">
-        <!-- Header Section -->
-        <header class="header-section">
-            <h1 class="gradient-text">Hitung Kapasitas 3D</h1>
-            <p class="subtitle">PPIC WKB - Solusi Optimalisasi Kontainer</p>
-            <div class="badge-container">
-                <div class="badge">🎮 3D Interactive</div>
-                <div class="badge">📋 Multi-Layer Analysis</div>
-                <div class="badge">🤖 AI-Powered Optimization</div>
+    <div class="main-container container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Premium Header -->
+        <div class="text-center mb-12 jiffy-bounce">
+            <div class="header-decoration inline-block">
+                <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-4">Hitung Kapasitas 3D</h1>
+                <div class="h-1 w-24 mx-auto bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full mt-4"></div>
             </div>
-        </header>
+            
+                <div class="glass-card px-5 py-2.5 rounded-full jiffy-fade-in jiffy-stagger-2 hover:bg-purple-500/20 transition-all">
+                    <span class="text-sm font-medium text-white/90 flex items-center gap-2"><span class="text-lg">PPIC</span> WKB</span>
+                </div>
+               
+        </div>
 
-        <!-- Main Content -->
-        <div class="content-grid">
+        <div class="grid lg:grid-cols-2 gap-8">
             <!-- Input Panel -->
-            <div class="input-panel glass-card">
-                <h2 class="section-header">⚙️ Parameter Kontainer</h2>
-                
+            <div class="glass-card rounded-2xl shadow-2xl p-8 jiffy-fade-in jiffy-stagger-1">
+                <h2 class="section-header text-2xl lg:text-3xl font-bold text-white mb-8">⚙️ Dimensi</h2>
+
                 <!-- Container Size -->
-                <div class="input-group">
-                    <h3 class="input-title">
-                        <span class="icon-badge bg-blue">📏</span>
+                <div class="mb-8">
+                    <h3 class="text-lg lg:text-xl font-semibold text-white/90 mb-4 flex items-center">
+                        <span class="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm mr-3 jiffy-pulse">📏</span>
                         Dimensi Kontainer (cm)
                     </h3>
-                    <div class="volume-display glass-card" onclick="ContainerCalculator.toggleContainerPanel()">
-                        <div id="containerVolume">66.54 m³</div>
-                        <div class="volume-label">Volume Total Kontainer</div>
-                        <div class="volume-hint">
-                            <svg class="chevron" viewBox="0 0 24 24">
-                                <path d="M19 9l-7 7-7-7"/>
-                            </svg>
-                            Klik untuk edit dimensi
+                    <div class="glass-card p-5 rounded-xl mb-4 jiffy-hover-lift cursor-pointer transition-all" onclick="toggleContainerPanel()">
+                        <div class="text-center">
+                            <div id="containerVolume" class="text-3xl lg:text-4xl font-bold gradient-text">66.54 m³</div>
+                            <div class="text-sm text-white/70 font-medium mt-1">Volume Total Kontainer</div>
+                            <div class="text-xs text-white/50 mt-2 flex items-center justify-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                                Klik untuk edit dimensi
+                            </div>
                         </div>
                     </div>
-                    <div id="containerInputs" class="dimension-inputs">
-                        <div class="dimension-input">
-                            <label>Panjang</label>
-                            <input type="number" id="containerLength" value="1158" oninput="ContainerCalculator.updateContainerVolume()">
+                    <div id="containerInputs" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-white/80">Panjang</label>
+                            <input type="number" id="containerLength" value="1158" oninput="updateContainerVolume()"
+                                   class="input-field w-full px-4 py-3 rounded-xl font-medium text-center text-base jiffy-hover-lift">
                         </div>
-                        <div class="dimension-input">
-                            <label>Lebar</label>
-                            <input type="number" id="containerWidth" value="228" oninput="ContainerCalculator.updateContainerVolume()">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-white/80">Lebar</label>
+                            <input type="number" id="containerWidth" value="228" oninput="updateContainerVolume()"
+                                   class="input-field w-full px-4 py-3 rounded-xl font-medium text-center text-base jiffy-hover-lift">
                         </div>
-                        <div class="dimension-input">
-                            <label>Tinggi</label>
-                            <input type="number" id="containerHeight" value="252" oninput="ContainerCalculator.updateContainerVolume()">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-white/80">Tinggi</label>
+                            <input type="number" id="containerHeight" value="252" oninput="updateContainerVolume()"
+                                   class="input-field w-full px-4 py-3 rounded-xl font-medium text-center text-base jiffy-hover-lift">
                         </div>
                     </div>
                 </div>
 
                 <!-- Box Size -->
-                <div class="input-group">
-                    <h3 class="input-title">
-                        <span class="icon-badge bg-green">📦</span>
+                <div class="mb-8">
+                    <h3 class="text-lg lg:text-xl font-semibold text-white/90 mb-4 flex items-center">
+                        <span class="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white text-sm mr-3 jiffy-pulse">📦</span>
                         Dimensi MC (cm)
                     </h3>
-                    <div class="dimension-inputs">
-                        <div class="dimension-input">
-                            <label>Panjang</label>
-                            <input type="number" id="boxLength" value="60">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-white/80">Panjang</label>
+                            <input type="number" id="boxLength" value="60" 
+                                   class="input-field w-full px-4 py-3 rounded-xl font-medium text-center text-base jiffy-hover-lift">
                         </div>
-                        <div class="dimension-input">
-                            <label>Lebar</label>
-                            <input type="number" id="boxWidth" value="40">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-white/80">Lebar</label>
+                            <input type="number" id="boxWidth" value="40" 
+                                   class="input-field w-full px-4 py-3 rounded-xl font-medium text-center text-base jiffy-hover-lift">
                         </div>
-                        <div class="dimension-input">
-                            <label>Tinggi</label>
-                            <input type="number" id="boxHeight" value="30">
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-white/80">Tinggi</label>
+                            <input type="number" id="boxHeight" value="30" 
+                                   class="input-field w-full px-4 py-3 rounded-xl font-medium text-center text-base jiffy-hover-lift">
                         </div>
                     </div>
                 </div>
 
                 <!-- Layout Pattern -->
-                <div class="input-group">
-                    <h3 class="input-title">
-                        <span class="icon-badge bg-purple">🎯</span>
+                <div class="mb-8">
+                    <h3 class="text-lg lg:text-xl font-semibold text-white/90 mb-4 flex items-center">
+                        <span class="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm mr-3 jiffy-pulse">🎯</span>
                         Pola Penataan
                     </h3>
-                    <div class="pattern-grid">
-                        <label class="pattern-option">
-                            <input type="radio" name="layoutPattern" value="normal" checked>
-                            <div class="pattern-content">
-                                <div class="pattern-icon">□</div>
-                                <div class="pattern-name">Standar</div>
-                                <div class="pattern-desc">Penataan dasar</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="radio-card border-2 border-white/10 rounded-xl p-4 jiffy-hover-lift">
+                            <input type="radio" name="layoutPattern" value="normal" checked class="sr-only">
+                            <div class="radio-content text-center">
+                                <div class="text-3xl mb-2">□</div>
+                                <div class="font-semibold text-white text-base">Standar</div>
+                                <div class="text-xs text-white/60 mt-1">Penataan dasar</div>
                             </div>
                         </label>
-                        <label class="pattern-option">
-                            <input type="radio" name="layoutPattern" value="zigzag">
-                            <div class="pattern-content">
-                                <div class="pattern-icon">⟲</div>
-                                <div class="pattern-name">Zig-Zag</div>
-                                <div class="pattern-desc">Pola bergantian</div>
+                        <label class="radio-card border-2 border-white/10 rounded-xl p-4 jiffy-hover-lift">
+                            <input type="radio" name="layoutPattern" value="zigzag" class="sr-only">
+                            <div class="radio-content text-center">
+                                <div class="text-3xl mb-2">⟲</div>
+                                <div class="font-semibold text-white text-base">Zig-Zag</div>
+                                <div class="text-xs text-white/60 mt-1">Pola bergantian</div>
                             </div>
                         </label>
-                        <label class="pattern-option">
-                            <input type="radio" name="layoutPattern" value="offset">
-                            <div class="pattern-content">
-                                <div class="pattern-icon">⬢</div>
-                                <div class="pattern-name">Offset</div>
-                                <div class="pattern-desc">Pola bergeser</div>
+                        <label class="radio-card border-2 border-white/10 rounded-xl p-4 jiffy-hover-lift">
+                            <input type="radio" name="layoutPattern" value="offset" class="sr-only">
+                            <div class="radio-content text-center">
+                                <div class="text-3xl mb-2">⬢</div>
+                                <div class="font-semibold text-white text-base">Offset</div>
+                                <div class="text-xs text-white/60 mt-1">Pola bergeser</div>
                             </div>
                         </label>
-                        <label class="pattern-option">
-                            <input type="radio" name="layoutPattern" value="optimal">
-                            <div class="pattern-content">
-                                <div class="pattern-icon">🤖</div>
-                                <div class="pattern-name">Optimal</div>
-                                <div class="pattern-desc">AI terbaik</div>
+                        <label class="radio-card border-2 border-white/10 rounded-xl p-4 jiffy-hover-lift">
+                            <input type="radio" name="layoutPattern" value="optimal" class="sr-only">
+                            <div class="radio-content text-center">
+                                <div class="text-3xl mb-2">🤖</div>
+                                <div class="font-semibold text-white text-base">Optimal</div>
+                                <div class="text-xs text-white/60 mt-1">AI terbaik</div>
                             </div>
                         </label>
                     </div>
                 </div>
 
                 <!-- Additional Options -->
-                <div class="input-group">
-                    <h3 class="input-title">
-                        <span class="icon-badge bg-orange">🔧</span>
+                <div class="mb-8">
+                    <h3 class="text-lg lg:text-xl font-semibold text-white/90 mb-4 flex items-center">
+                        <span class="w-8 h-8 lg:w-9 lg:h-9 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-sm mr-3 jiffy-pulse">🔧</span>
                         Opsi Tambahan
                     </h3>
-                    <div class="option-list">
-                        <label class="option-item">
-                            <input type="checkbox" id="allowRotation" checked>
-                            <div class="option-content">
-                                <div class="option-name">Rotasi Kotak (90°)</div>
-                                <div class="option-desc">Meningkatkan efisiensi penataan</div>
+                    <div class="space-y-4">
+                        <label class="flex items-center p-4 glass-card rounded-xl cursor-pointer jiffy-hover-lift transition-all hover:border-blue-500/30">
+                            <input type="checkbox" id="allowRotation" checked 
+                                   class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 bg-white/10 border-white/20">
+                            <div class="ml-4">
+                                <div class="font-semibold text-white text-base">Rotasi Kotak (90°)</div>
+                                <div class="text-sm text-white/60">Meningkatkan efisiensi penataan</div>
                             </div>
                         </label>
-                        <label class="option-item">
-                            <input type="checkbox" id="enable3D">
-                            <div class="option-content">
-                                <div class="option-name">Visualisasi 3D</div>
-                                <div class="option-desc">Tampilan interaktif dengan kontrol kamera</div>
+                        <label class="flex items-center p-4 glass-card rounded-xl cursor-pointer jiffy-hover-lift transition-all hover:border-purple-500/30">
+                            <input type="checkbox" id="enable3D" 
+                                   class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 bg-white/10 border-white/20">
+                            <div class="ml-4">
+                                <div class="font-semibold text-white text-base">Visualisasi 3D</div>
+                                <div class="text-sm text-white/60">Tampilan interaktif dengan kontrol kamera</div>
                             </div>
                         </label>
                     </div>
                 </div>
 
-                <!-- Action Button -->
-                <button class="calculate-btn" onclick="ContainerCalculator.calculateOptimalLayout()">
-                    <svg class="calc-icon" viewBox="0 0 24 24">
-                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    Hitung Layout Optimal
-                </button>
+                <!-- Action Buttons -->
+                <div class="space-y-4">
+                    <button onclick="calculateOptimalLayout()" 
+                            class="gradient-button w-full text-white font-bold py-4 px-8 rounded-xl text-lg jiffy-button-press jiffy-hover-lift flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Hitung Layout Optimal
+                    </button>
+                </div>
             </div>
 
             <!-- Results Panel -->
-            <div class="results-panel glass-card">
-                <h2 class="section-header">📊 Hasil Analisis</h2>
-                <div id="resultsContainer" class="results-container">
-                    <div class="empty-state">
-                        <div class="empty-icon">📦</div>
-                        <p class="empty-text">Masukkan parameter untuk memulai analisis</p>
-                        <p class="empty-subtext">Sistem akan menampilkan konfigurasi optimal berdasarkan input Anda</p>
+            <div class="glass-card rounded-2xl shadow-2xl p-8 jiffy-fade-in jiffy-stagger-2">
+                <h2 class="section-header text-2xl lg:text-3xl font-bold text-white mb-8">📊 Hasil Analisis</h2>
+
+                <div id="resultsContainer" class="space-y-6">
+                    <div class="text-center text-white/50 py-12">
+                        <div class="text-8xl mb-6 jiffy-pulse">📦</div>
+                        <p class="text-xl font-medium jiffy-fade-in">Masukkan parameter untuk memulai analisis</p>
+                        <div class="mt-4 text-sm text-white/40 jiffy-fade-in jiffy-stagger-1">Sistem akan menampilkan konfigurasi optimal berdasarkan input Anda</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Visualization Panel -->
-        <div class="visualization-panel glass-card">
-            <div class="panel-header">
-                <h2 class="section-header">🎯 Visualisasi 3D</h2>
-                <button id="toggle3DMode" class="visualization-toggle" onclick="ContainerCalculator.toggle3DVisualization()">
-                    🎮 Mode 3D Interaktif
-                </button>
+        <!-- Enhanced Visualization Panel -->
+        <div class="mt-12 glass-card rounded-2xl shadow-2xl p-8 jiffy-fade-in jiffy-stagger-3">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+                <h2 class="section-header text-2xl lg:text-3xl font-bold text-white">🎯 Visualisasi 3D</h2>
+                <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                    <button id="toggle3DMode" onclick="toggle3DVisualization()" 
+                            class="visualization-mode-toggle text-white px-6 py-3 rounded-xl font-semibold text-base jiffy-button-press jiffy-hover-lift flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                        </svg>
+                        Mode 3D Interaktif
+                    </button>
+                </div>
             </div>
 
             <!-- Layer Controls -->
-            <div id="layerControls" class="control-panel layer-controls hidden">
-                <div class="controls-header">
-                    <h4 class="controls-title">
-                        <span class="controls-icon">🏗️</span>
+            <div id="layerControls" class="hidden mb-6 control-panel p-6 rounded-xl jiffy-elastic">
+                <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-4 gap-3">
+                    <h4 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span class="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm">🏗️</span>
                         Kontrol Sap
                     </h4>
-                    <label class="toggle-label">
-                        <input type="checkbox" id="showAllLayers" onchange="ContainerCalculator.toggleLayerMode()">
-                        <span>Tampilkan Semua Sap</span>
-                    </label>
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" id="showAllLayers" onchange="toggleLayerMode()" 
+                                   class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 bg-white/10 border-white/20">
+                            <span class="text-sm font-medium text-white/80">Tampilkan Semua Sap</span>
+                        </label>
+                    </div>
                 </div>
-                
-                <div class="info-box">
+                <div class="text-sm text-white/70 bg-blue-500/10 p-3 rounded-lg mb-4">
                     💡 <strong>Informasi:</strong> SAP dari depan ke belakang (berdasarkan lebar x tinggi kontainer)
                 </div>
                 
                 <!-- Layer Tabs -->
-                <div id="layerTabs" class="layer-tabs"></div>
+                <div id="layerTabs" class="flex gap-2 mb-4 overflow-x-auto pb-2"></div>
                 
                 <!-- Layer Slider -->
-                <div class="layer-slider-container">
-                    <label>Sap:</label>
-                    <input type="range" id="layerSlider" min="1" max="1" value="1" onchange="ContainerCalculator.showSpecificLayer(this.value)">
-                    <span id="layerDisplay">1 / 1</span>
+                <div class="flex items-center gap-4 lg:gap-6">
+                    <label class="text-sm font-semibold text-white/80 min-w-16">Sap:</label>
+                    <input type="range" id="layerSlider" min="1" max="1" value="1" 
+                           class="control-slider flex-1" onchange="showSpecificLayer(this.value)">
+                    <span id="layerDisplay" class="text-sm font-bold text-white min-w-16 text-center">1 / 1</span>
                 </div>
             </div>
 
             <!-- 3D Controls Panel -->
-            <div id="threeDControls" class="control-panel three-d-controls hidden">
-                <div class="controls-grid">
-                    <div class="control-group">
-                        <h4 class="controls-title">
-                            <span class="controls-icon">🎮</span>
+            <div id="threeDControls" class="hidden mb-6 control-panel p-6 rounded-xl jiffy-zoom-in">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span class="w-7 h-7 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm">🎮</span>
                             Kontrol Kamera
                         </h4>
-                        <button class="control-btn" onclick="ContainerCalculator.resetCamera()">
-                            <svg class="control-icon" viewBox="0 0 24 24">
-                                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                            Reset View
-                        </button>
-                        <label class="toggle-label">
-                            <input type="checkbox" id="wireframeMode" onchange="ContainerCalculator.toggleWireframe()">
-                            <span>Wireframe:</span>
-                        </label>
+                        <div class="space-y-3">
+                            <button onclick="resetCamera()" 
+                                    class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 px-4 rounded-lg transition-all jiffy-button-press text-base flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Reset View
+                            </button>
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm font-medium text-white/80 min-w-20">Wireframe:</label>
+                                <input type="checkbox" id="wireframeMode" onchange="toggleWireframe()" 
+                                       class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 bg-white/10 border-white/20">
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="control-group">
-                        <h4 class="controls-title">
-                            <span class="controls-icon">🎨</span>
+                    <div class="space-y-4">
+                        <h4 class="text-lg font-bold text-white flex items-center gap-2">
+                            <span class="w-7 h-7 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center text-white text-sm">🎨</span>
                             Pengaturan Visual
                         </h4>
-                        <div class="slider-control">
-                            <label>Opacity:</label>
-                            <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.8" onchange="ContainerCalculator.updateOpacity(this.value)">
-                            <span id="opacityValue">0.8</span>
-                        </div>
-                        <div class="info-box">
-                            💡 <strong>Tips:</strong> Drag untuk memutar, scroll untuk zoom, klik kanan untuk pan
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <label class="text-sm font-medium text-white/80 min-w-20">Opacity:</label>
+                                <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.8" 
+                                       class="control-slider flex-1" onchange="updateOpacity(this.value)">
+                                <span id="opacityValue" class="text-sm font-bold text-white min-w-8">0.8</span>
+                            </div>
+                            <div class="text-sm text-white/60 bg-white/5 p-3 rounded-lg">
+                                💡 <strong>Tips:</strong> Drag untuk memutar, scroll untuk zoom, klik kanan untuk pan
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Visualization Container -->
-            <div id="visualizationContainer" class="visualization-container">
-                <div class="empty-visualization">
-                    <div class="empty-icon">🎨</div>
-                    <p class="empty-text">Visualisasi akan muncul setelah perhitungan</p>
-                    <p class="empty-subtext">Sistem akan menampilkan layout 2D/3D interaktif</p>
+            <div id="visualizationContainer" class="border-4 border-white/10 rounded-2xl p-8 min-h-96 flex items-center justify-center bg-gradient-to-br from-white/5 to-white/10 jiffy-hover-lift">
+                <div class="text-center text-white/50">
+                    <div class="text-7xl lg:text-8xl mb-6 jiffy-pulse">🎨</div>
+                    <p class="text-xl lg:text-2xl font-medium jiffy-fade-in">Visualisasi akan muncul setelah perhitungan</p>
+                    <div class="mt-4 text-sm text-white/40 jiffy-fade-in jiffy-stagger-1">Sistem akan menampilkan layout 2D/3D interaktif</div>
                 </div>
             </div>
 
             <!-- 3D Container -->
-            <div id="threejs-container" class="threejs-container"></div>
+            <div id="threejs-container" class="hidden rounded-2xl overflow-hidden h-[500px]"></div>
         </div>
     </div>
 
