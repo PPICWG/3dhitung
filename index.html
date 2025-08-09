@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hitung Kontainer - WKB 3D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header Section -->
+        <header class="header-section">
+            <h1 class="gradient-text">Hitung Kapasitas 3D</h1>
+            <p class="subtitle">PPIC WKB - Solusi Optimalisasi Kontainer</p>
+            <div class="badge-container">
+                <div class="badge">🎮 3D Interactive</div>
+                <div class="badge">📋 Multi-Layer Analysis</div>
+                <div class="badge">🤖 AI-Powered Optimization</div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="content-grid">
+            <!-- Input Panel -->
+            <div class="input-panel glass-card">
+                <h2 class="section-header">⚙️ Parameter Kontainer</h2>
+                
+                <!-- Container Size -->
+                <div class="input-group">
+                    <h3 class="input-title">
+                        <span class="icon-badge bg-blue">📏</span>
+                        Dimensi Kontainer (cm)
+                    </h3>
+                    <div class="volume-display glass-card" onclick="toggleContainerPanel()">
+                        <div id="containerVolume">66.54 m³</div>
+                        <div class="volume-label">Volume Total Kontainer</div>
+                        <div class="volume-hint">
+                            <svg class="chevron" viewBox="0 0 24 24">
+                                <path d="M19 9l-7 7-7-7"/>
+                            </svg>
+                            Klik untuk edit dimensi
+                        </div>
+                    </div>
+                    <div id="containerInputs" class="dimension-inputs">
+                        <div class="dimension-input">
+                            <label>Panjang</label>
+                            <input type="number" id="containerLength" value="1158" oninput="updateContainerVolume()">
+                        </div>
+                        <div class="dimension-input">
+                            <label>Lebar</label>
+                            <input type="number" id="containerWidth" value="228" oninput="updateContainerVolume()">
+                        </div>
+                        <div class="dimension-input">
+                            <label>Tinggi</label>
+                            <input type="number" id="containerHeight" value="252" oninput="updateContainerVolume()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Box Size -->
+                <div class="input-group">
+                    <h3 class="input-title">
+                        <span class="icon-badge bg-green">📦</span>
+                        Dimensi MC (cm)
+                    </h3>
+                    <div class="dimension-inputs">
+                        <div class="dimension-input">
+                            <label>Panjang</label>
+                            <input type="number" id="boxLength" value="60">
+                        </div>
+                        <div class="dimension-input">
+                            <label>Lebar</label>
+                            <input type="number" id="boxWidth" value="40">
+                        </div>
+                        <div class="dimension-input">
+                            <label>Tinggi</label>
+                            <input type="number" id="boxHeight" value="30">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layout Pattern -->
+                <div class="input-group">
+                    <h3 class="input-title">
+                        <span class="icon-badge bg-purple">🎯</span>
+                        Pola Penataan
+                    </h3>
+                    <div class="pattern-grid">
+                        <label class="pattern-option">
+                            <input type="radio" name="layoutPattern" value="normal" checked>
+                            <div class="pattern-content">
+                                <div class="pattern-icon">□</div>
+                                <div class="pattern-name">Standar</div>
+                                <div class="pattern-desc">Penataan dasar</div>
+                            </div>
+                        </label>
+                        <label class="pattern-option">
+                            <input type="radio" name="layoutPattern" value="zigzag">
+                            <div class="pattern-content">
+                                <div class="pattern-icon">⟲</div>
+                                <div class="pattern-name">Zig-Zag</div>
+                                <div class="pattern-desc">Pola bergantian</div>
+                            </div>
+                        </label>
+                        <label class="pattern-option">
+                            <input type="radio" name="layoutPattern" value="offset">
+                            <div class="pattern-content">
+                                <div class="pattern-icon">⬢</div>
+                                <div class="pattern-name">Offset</div>
+                                <div class="pattern-desc">Pola bergeser</div>
+                            </div>
+                        </label>
+                        <label class="pattern-option">
+                            <input type="radio" name="layoutPattern" value="optimal">
+                            <div class="pattern-content">
+                                <div class="pattern-icon">🤖</div>
+                                <div class="pattern-name">Optimal</div>
+                                <div class="pattern-desc">AI terbaik</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Additional Options -->
+                <div class="input-group">
+                    <h3 class="input-title">
+                        <span class="icon-badge bg-orange">🔧</span>
+                        Opsi Tambahan
+                    </h3>
+                    <div class="option-list">
+                        <label class="option-item">
+                            <input type="checkbox" id="allowRotation" checked>
+                            <div class="option-content">
+                                <div class="option-name">Rotasi Kotak (90°)</div>
+                                <div class="option-desc">Meningkatkan efisiensi penataan</div>
+                            </div>
+                        </label>
+                        <label class="option-item">
+                            <input type="checkbox" id="enable3D">
+                            <div class="option-content">
+                                <div class="option-name">Visualisasi 3D</div>
+                                <div class="option-desc">Tampilan interaktif dengan kontrol kamera</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button class="calculate-btn" onclick="calculateOptimalLayout()">
+                    <svg class="calc-icon" viewBox="0 0 24 24">
+                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Hitung Layout Optimal
+                </button>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel glass-card">
+                <h2 class="section-header">📊 Hasil Analisis</h2>
+                <div id="resultsContainer" class="results-container">
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <p class="empty-text">Masukkan parameter untuk memulai analisis</p>
+                        <p class="empty-subtext">Sistem akan menampilkan konfigurasi optimal berdasarkan input Anda</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Panel -->
+        <div class="visualization-panel glass-card">
+            <div class="panel-header">
+                <h2 class="section-header">🎯 Visualisasi 3D</h2>
+                <button id="toggle3DMode" class="visualization-toggle" onclick="toggle3DVisualization()">
+                    🎮 Mode 3D Interaktif
+                </button>
+            </div>
+
+            <!-- Layer Controls -->
+            <div id="layerControls" class="control-panel layer-controls">
+                <div class="controls-header">
+                    <h4 class="controls-title">
+                        <span class="controls-icon">🏗️</span>
+                        Kontrol Sap
+                    </h4>
+                    <label class="toggle-label">
+                        <input type="checkbox" id="showAllLayers" onchange="toggleLayerMode()">
+                        <span>Tampilkan Semua Sap</span>
+                    </label>
+                </div>
+                
+                <div class="info-box">
+                    💡 <strong>Informasi:</strong> SAP dari depan ke belakang (berdasarkan lebar x tinggi kontainer)
+                </div>
+                
+                <!-- Layer Tabs -->
+                <div id="layerTabs" class="layer-tabs"></div>
+                
+                <!-- Layer Slider -->
+                <div class="layer-slider-container">
+                    <label>Sap:</label>
+                    <input type="range" id="layerSlider" min="1" max="1" value="1" onchange="showSpecificLayer(this.value)">
+                    <span id="layerDisplay">1 / 1</span>
+                </div>
+            </div>
+
+            <!-- 3D Controls Panel -->
+            <div id="threeDControls" class="control-panel three-d-controls">
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <h4 class="controls-title">
+                            <span class="controls-icon">🎮</span>
+                            Kontrol Kamera
+                        </h4>
+                        <button class="control-btn" onclick="resetCamera()">
+                            <svg class="control-icon" viewBox="0 0 24 24">
+                                <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Reset View
+                        </button>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="wireframeMode" onchange="toggleWireframe()">
+                            <span>Wireframe:</span>
+                        </label>
+                    </div>
+                    
+                    <div class="control-group">
+                        <h4 class="controls-title">
+                            <span class="controls-icon">🎨</span>
+                            Pengaturan Visual
+                        </h4>
+                        <div class="slider-control">
+                            <label>Opacity:</label>
+                            <input type="range" id="opacitySlider" min="0.1" max="1" step="0.1" value="0.8" onchange="updateOpacity(this.value)">
+                            <span id="opacityValue">0.8</span>
+                        </div>
+                        <div class="info-box">
+                            💡 <strong>Tips:</strong> Drag untuk memutar, scroll untuk zoom, klik kanan untuk pan
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization Container -->
+            <div id="visualizationContainer" class="visualization-container">
+                <div class="empty-visualization">
+                    <div class="empty-icon">🎨</div>
+                    <p class="empty-text">Visualisasi akan muncul setelah perhitungan</p>
+                    <p class="empty-subtext">Sistem akan menampilkan layout 2D/3D interaktif</p>
+                </div>
+            </div>
+
+            <!-- 3D Container -->
+            <div id="threejs-container" class="threejs-container"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
