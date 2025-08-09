@@ -1,592 +1,538 @@
-let calculationResults = null;
-let currentVisualizationMode = '2d';
-let scene, camera, renderer, controls;
-let boxMeshes = [];
-let containerMesh = null;
-let animationId = null;
+// DOM Elements
+const containerVolume = document.getElementById('containerVolume');
+const containerInputs = document.getElementById('containerInputs');
+const containerLength = document.getElementById('containerLength');
+const containerWidth = document.getElementById('containerWidth');
+const containerHeight = document.getElementById('containerHeight');
+const boxLength = document.getElementById('boxLength');
+const boxWidth = document.getElementById('boxWidth');
+const boxHeight = document.getElementById('boxHeight');
+const allowRotation = document.getElementById('allowRotation');
+const enable3D = document.getElementById('enable3D');
+const resultsContainer = document.getElementById('resultsContainer');
+const visualizationContainer = document.getElementById('visualizationContainer');
+const threejsContainer = document.getElementById('threejs-container');
+const layerTabs = document.getElementById('layerTabs');
+const layerSlider = document.getElementById('layerSlider');
+const layerDisplay = document.getElementById('layerDisplay');
+const showAllLayers = document.getElementById('showAllLayers');
+const wireframeMode = document.getElementById('wireframeMode');
+const opacitySlider = document.getElementById('opacitySlider');
+const opacityValue = document.getElementById('opacityValue');
 
-// Initialize page
+// State variables
+let is3DModeActive = false;
+let currentLayer = 1;
+let totalLayers = 1;
+let scene, camera, renderer, controls, boxes = [];
+let layersData = [];
+
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    initializeAnimations();
-    setupEventListeners();
     updateContainerVolume();
+    
+    // Initialize Three.js if 3D mode is enabled by default
+    if (enable3D.checked) {
+        initThreeJS();
+    }
 });
 
-function initializeAnimations() {
-    // Add entrance animations to cards
-    const cards = document.querySelectorAll('.glass-card');
-    cards.forEach((card, index) => {
-        setTimeout(() => {
-            card.style.animation = 'fadeIn 0.8s ease-out forwards';
-            card.style.opacity = '0';
-        }, index * 100);
-    });
-}
-
-function setupEventListeners() {
-    // Radio button change listeners
-    const radioButtons = document.querySelectorAll('input[name="layoutPattern"]');
-    radioButtons.forEach(radio => {
-        radio.addEventListener('change', function() {
-            const card = this.closest('.pattern-option');
-            card.style.animation = 'none';
-            void card.offsetWidth; // Trigger reflow
-            card.style.animation = 'bounce 0.6s ease';
-        });
-    });
-
-    // Checkbox listeners
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const label = this.closest('label');
-            label.style.animation = 'none';
-            void label.offsetWidth;
-            label.style.animation = 'pulse 2s ease';
-        });
-    });
-
-    // Initialize container panel as collapsed
-    document.getElementById('containerInputs').style.display = 'none';
-}
-
+// Toggle container dimension inputs
 function toggleContainerPanel() {
-    const inputs = document.getElementById('containerInputs');
-    const isHidden = inputs.style.display === 'none';
-    
-    if (isHidden) {
-        inputs.style.display = 'grid';
-        inputs.style.animation = 'slideUp 0.8s ease forwards';
-    } else {
-        inputs.style.display = 'none';
-    }
-    
-    // Reset calculation results when container size changes
-    if (calculationResults) {
-        calculationResults = null;
-        document.getElementById('resultsContainer').innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📦</div>
-                <p class="empty-text">Ukuran kontainer diubah. Klik "Hitung Layout Optimal" untuk hasil baru</p>
-            </div>
-        `;
-        document.getElementById('visualizationContainer').innerHTML = `
-            <div class="empty-visualization">
-                <div class="empty-icon">🎨</div>
-                <p class="empty-text">Visualisasi akan muncul setelah perhitungan</p>
-            </div>
-        `;
-    }
+    containerInputs.style.display = containerInputs.style.display === 'none' ? 'grid' : 'none';
+    updateContainerVolume();
 }
 
+// Update container volume display
 function updateContainerVolume() {
-    const length = parseFloat(document.getElementById('containerLength').value) || 0;
-    const width = parseFloat(document.getElementById('containerWidth').value) || 0;
-    const height = parseFloat(document.getElementById('containerHeight').value) || 0;
+    const length = parseFloat(containerLength.value) || 0;
+    const width = parseFloat(containerWidth.value) || 0;
+    const height = parseFloat(containerHeight.value) || 0;
     
     const volume = (length * width * height) / 1000000; // Convert to m³
-    document.getElementById('containerVolume').textContent = volume.toFixed(2) + ' m³';
+    containerVolume.textContent = volume.toFixed(2) + ' m³';
 }
 
-function showAlert(message, type = 'info') {
-    const alert = document.createElement('div');
-    alert.className = `alert ${type} show`;
-    
-    const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
+// Calculate optimal layout
+function calculateOptimalLayout() {
+    // Get container dimensions
+    const container = {
+        length: parseFloat(containerLength.value) || 0,
+        width: parseFloat(containerWidth.value) || 0,
+        height: parseFloat(containerHeight.value) || 0
     };
     
-    alert.innerHTML = `
-        <div class="flex items-center gap-3">
-            <span class="text-xl">${icons[type]}</span>
-            <span>${message}</span>
-        </div>
-    `;
+    // Get box dimensions
+    const box = {
+        length: parseFloat(boxLength.value) || 0,
+        width: parseFloat(boxWidth.value) || 0,
+        height: parseFloat(boxHeight.value) || 0
+    };
     
-    document.body.appendChild(alert);
+    // Get selected layout pattern
+    const layoutPattern = document.querySelector('input[name="layoutPattern"]:checked').value;
     
-    setTimeout(() => {
-        alert.classList.add('fade-out');
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.parentNode.removeChild(alert);
-            }
-        }, 300);
-    }, 3000);
-}
-
-function calculateOptimalLayout() {
-    const button = event.target;
-    button.style.animation = 'pulse 2s ease';
+    // Check if rotation is allowed
+    const rotationAllowed = allowRotation.checked;
     
-    // Get input values
-    const containerL = parseFloat(document.getElementById('containerLength').value);
-    const containerW = parseFloat(document.getElementById('containerWidth').value);
-    const containerH = parseFloat(document.getElementById('containerHeight').value);
+    // Perform calculations (simplified for demo)
+    const results = calculateBoxPlacement(container, box, layoutPattern, rotationAllowed);
     
-    const boxL = parseFloat(document.getElementById('boxLength').value);
-    const boxW = parseFloat(document.getElementById('boxWidth').value);
-    const boxH = parseFloat(document.getElementById('boxHeight').value);
+    // Display results
+    displayResults(results);
     
-    const allowRotation = document.getElementById('allowRotation').checked;
-    const selectedPattern = document.querySelector('input[name="layoutPattern"]:checked').value;
-
-    // Basic validation
-    if (!boxL || !boxW || !boxH || boxL <= 0 || boxW <= 0 || boxH <= 0) {
-        showAlert('Mohon isi semua ukuran kotak dengan benar!', 'error');
-        return;
-    }
-
-    // Show loading state
-    document.getElementById('resultsContainer').innerHTML = `
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p class="loading-text">Menghitung layout ${selectedPattern}...</p>
-            <div class="progress-bar">
-                <div class="progress"></div>
-            </div>
-            <p class="loading-subtext">AI sedang menganalisis konfigurasi optimal</p>
-            <div class="loading-dots">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-            </div>
-        </div>
-    `;
-
-    // Calculate scenarios (simplified for example)
-    setTimeout(() => {
-        const scenarios = [];
-        let optimal;
-
-        // This would be replaced with actual calculation logic
-        optimal = {
-            name: 'Normal',
-            boxesPerRow: Math.floor(containerW / boxW),
-            boxesPerCol: Math.floor(containerH / boxH),
-            boxesPerLayer: Math.floor(containerW / boxW) * Math.floor(containerH / boxH),
-            layers: Math.floor(containerL / boxL),
-            totalBoxes: Math.floor(containerW / boxW) * Math.floor(containerH / boxH) * Math.floor(containerL / boxL),
-            efficiency: ((Math.floor(containerW / boxW) * Math.floor(containerH / boxH) * Math.floor(containerL / boxL) * (boxL * boxW * boxH) / (containerL * containerW * containerH) * 100).toFixed(1),
-            layout: [] // This would contain the actual layout pattern
-        };
-
-        calculationResults = {
-            scenarios: [optimal],
-            optimal: optimal,
-            containerDimensions: { length: containerL, width: containerW, height: containerH },
-            boxDimensions: { length: boxL, width: boxW, height: boxH },
-            metrics: {
-                containerVolume: containerL * containerW * containerH,
-                boxVolume: boxL * boxW * boxH,
-                wastedSpace: containerL * containerW * containerH - (optimal.totalBoxes * boxL * boxW * boxH),
-                spaceSavings: optimal.efficiency
-            }
-        };
-
-        displayResults();
-        createVisualization();
-        showAlert('Perhitungan selesai! Layout optimal ditemukan', 'success');
-    }, 2000);
-}
-
-function displayResults() {
-    const container = document.getElementById('resultsContainer');
-    const { optimal, metrics } = calculationResults;
+    // Generate layers data
+    generateLayersData(results);
     
-    container.innerHTML = `
-        <div class="result-summary">
-            <h3 class="result-title">
-                <span class="result-icon">🏆</span>
-                Layout Optimal: ${optimal.name}
-            </h3>
-            <div class="result-metrics">
-                <div class="metric">
-                    <div class="metric-value gradient-text">${optimal.totalBoxes}</div>
-                    <div class="metric-label">Total MC</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value gradient-text">${optimal.efficiency}%</div>
-                    <div class="metric-label">Efisiensi</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value">${optimal.boxesPerLayer}</div>
-                    <div class="metric-label">Kotak per Sap</div>
-                </div>
-                <div class="metric">
-                    <div class="metric-value">${optimal.layers}</div>
-                    <div class="metric-label">Tinggi Sap</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="analysis-section">
-            <h4 class="analysis-title">
-                <span class="analysis-icon">📊</span>
-                Analisis Mendalam
-            </h4>
-            <div class="analysis-grid">
-                <div class="analysis-card">
-                    <div class="analysis-card-title">Volume Kontainer</div>
-                    <div class="analysis-card-value gradient-text">${(metrics.containerVolume / 1000000).toFixed(2)} m³</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-title">Volume Terpakai</div>
-                    <div class="analysis-card-value" style="color: #10b981">${metrics.spaceSavings}%</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-title">Ruang Terbuang</div>
-                    <div class="analysis-card-value" style="color: #ef4444">${(metrics.wastedSpace / 1000000).toFixed(2)} m³</div>
-                </div>
-                <div class="analysis-card">
-                    <div class="analysis-card-title">Kotak per m³</div>
-                    <div class="analysis-card-value" style="color: #a855f7">${(optimal.totalBoxes / (metrics.containerVolume / 1000000)).toFixed(0)}</div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function createVisualization() {
-    const enable3D = document.getElementById('enable3D').checked;
+    // Update layer controls
+    updateLayerControls();
     
-    if (enable3D) {
-        currentVisualizationMode = '3d';
-        document.getElementById('toggle3DMode').textContent = '📋 Mode 2D';
-        document.getElementById('threeDControls').style.display = 'block';
-        init3DVisualization();
-    } else {
-        currentVisualizationMode = '2d';
-        document.getElementById('toggle3DMode').textContent = '🎮 Mode 3D';
-        document.getElementById('threeDControls').style.display = 'none';
-        create2DVisualization();
+    // Show visualization
+    showVisualization(results);
+    
+    // Initialize 3D if enabled
+    if (enable3D.checked && !is3DModeActive) {
+        initThreeJS();
+        is3DModeActive = true;
     }
     
-    setupLayerControls();
+    // Render 3D if enabled
+    if (enable3D.checked && is3DModeActive) {
+        render3DVisualization(results);
+    }
 }
 
-function toggle3DVisualization() {
-    if (currentVisualizationMode === '2d') {
-        currentVisualizationMode = '3d';
-        document.getElementById('toggle3DMode').textContent = '📋 Mode 2D';
-        document.getElementById('threeDControls').style.display = 'block';
-        if (calculationResults) {
-            init3DVisualization();
-        }
-    } else {
-        currentVisualizationMode = '2d';
-        document.getElementById('toggle3DMode').textContent = '🎮 Mode 3D';
-        document.getElementById('threeDControls').style.display = 'none';
-        cleanup3D();
-        if (calculationResults) {
-            create2DVisualization();
+// Core calculation function
+function calculateBoxPlacement(container, box, pattern, rotationAllowed) {
+    let boxes = [];
+    let totalBoxes = 0;
+    let efficiency = 0;
+    
+    // Calculate how many boxes fit in each dimension
+    const lengthFit = Math.floor(container.length / box.length);
+    const widthFit = Math.floor(container.width / box.width);
+    const heightFit = Math.floor(container.height / box.height);
+    
+    // Basic calculation (simplified)
+    totalBoxes = lengthFit * widthFit * heightFit;
+    
+    // Calculate efficiency
+    const containerVolume = container.length * container.width * container.height;
+    const boxesVolume = totalBoxes * box.length * box.width * box.height;
+    efficiency = (boxesVolume / containerVolume) * 100;
+    
+    // Generate box positions (simplified for demo)
+    for (let x = 0; x < lengthFit; x++) {
+        for (let y = 0; y < widthFit; y++) {
+            for (let z = 0; z < heightFit; z++) {
+                boxes.push({
+                    x: x * box.length,
+                    y: y * box.width,
+                    z: z * box.height,
+                    length: box.length,
+                    width: box.width,
+                    height: box.height,
+                    color: getRandomColor()
+                });
+            }
         }
     }
+    
+    return {
+        totalBoxes,
+        efficiency,
+        boxes,
+        container,
+        box
+    };
 }
 
-function init3DVisualization() {
-    if (!calculationResults) return;
+// Display results in the results panel
+function displayResults(results) {
+    resultsContainer.innerHTML = `
+        <div class="result-card">
+            <div class="result-icon">📦</div>
+            <div class="result-value">${results.totalBoxes}</div>
+            <div class="result-label">Total MC</div>
+        </div>
+        <div class="result-card">
+            <div class="result-icon">📏</div>
+            <div class="result-value">${results.efficiency.toFixed(1)}%</div>
+            <div class="result-label">Efisiensi Ruang</div>
+        </div>
+        <div class="result-card">
+            <div class="result-icon">📊</div>
+            <div class="result-value">${Math.floor(results.container.length / results.box.length)}</div>
+            <div class="result-label">MC per Baris (P)</div>
+        </div>
+        <div class="result-card">
+            <div class="result-icon">📊</div>
+            <div class="result-value">${Math.floor(results.container.width / results.box.width)}</div>
+            <div class="result-label">MC per Kolom (L)</div>
+        </div>
+        <div class="result-card">
+            <div class="result-icon">📊</div>
+            <div class="result-value">${Math.floor(results.container.height / results.box.height)}</div>
+            <div class="result-label">Tumpukan (T)</div>
+        </div>
+        
+        <div class="result-details">
+            <h3 class="details-header">Detail Konfigurasi</h3>
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Dimensi Kontainer:</span>
+                    <span class="detail-value">${results.container.length} × ${results.container.width} × ${results.container.height} cm</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Dimensi MC:</span>
+                    <span class="detail-value">${results.box.length} × ${results.box.width} × ${results.box.height} cm</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Volume Terpakai:</span>
+                    <span class="detail-value">${(results.totalBoxes * results.box.length * results.box.width * results.box.height / 1000000).toFixed(2)} m³</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Sisa Ruang:</span>
+                    <span class="detail-value">${(100 - results.efficiency).toFixed(1)}%</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
 
-    cleanup3D();
+// Generate layers data for 2D visualization
+function generateLayersData(results) {
+    layersData = [];
+    const boxHeight = results.box.height;
+    const containerHeight = results.container.height;
+    totalLayers = Math.floor(containerHeight / boxHeight);
+    
+    for (let layer = 0; layer < totalLayers; layer++) {
+        const layerBoxes = results.boxes.filter(box => 
+            Math.floor(box.z / boxHeight) === layer
+        );
+        
+        layersData.push({
+            layer: layer + 1,
+            boxes: layerBoxes,
+            count: layerBoxes.length
+        });
+    }
+}
 
-    const container = document.getElementById('visualizationContainer');
-    container.style.display = 'none';
+// Update layer controls
+function updateLayerControls() {
+    // Update slider
+    layerSlider.max = totalLayers;
+    layerSlider.value = 1;
+    layerDisplay.textContent = `1 / ${totalLayers}`;
     
-    const threejsContainer = document.getElementById('threejs-container');
-    threejsContainer.style.display = 'block';
+    // Update tabs
+    layerTabs.innerHTML = '';
+    layersData.forEach((layer, index) => {
+        const tab = document.createElement('div');
+        tab.className = `layer-tab ${index === 0 ? 'active' : ''}`;
+        tab.innerHTML = `
+            <div class="layer-number">Sap ${layer.layer}</div>
+            <div class="layer-count">${layer.count} MC</div>
+        `;
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            showSpecificLayer(layer.layer);
+            layerSlider.value = layer.layer;
+            layerDisplay.textContent = `${layer.layer} / ${totalLayers}`;
+        });
+        layerTabs.appendChild(tab);
+    });
+}
+
+// Show specific layer visualization
+function showSpecificLayer(layerNumber) {
+    currentLayer = parseInt(layerNumber);
+    const layerData = layersData.find(l => l.layer === currentLayer);
     
-    // Setup Three.js scene
+    if (layerData) {
+        showLayerVisualization(layerData);
+    }
+}
+
+// Toggle between showing all layers or single layer
+function toggleLayerMode() {
+    if (showAllLayers.checked) {
+        // Show all layers
+        showAllLayersVisualization();
+    } else {
+        // Show current layer
+        showSpecificLayer(currentLayer);
+    }
+}
+
+// Show 2D visualization of a specific layer
+function showLayerVisualization(layerData) {
+    const containerWidth = parseFloat(containerWidth.value);
+    const containerLength = parseFloat(containerLength.value);
+    
+    visualizationContainer.innerHTML = `
+        <div class="visualization-header">
+            <h3>Sap ${layerData.layer} - ${layerData.count} MC</h3>
+        </div>
+        <div class="visualization-2d-container">
+            <svg class="visualization-svg" viewBox="0 0 ${containerLength} ${containerWidth}">
+                <!-- Container outline -->
+                <rect x="0" y="0" width="${containerLength}" height="${containerWidth}" 
+                      fill="none" stroke="#3a86ff" stroke-width="2" stroke-dasharray="5,5" />
+                
+                <!-- Boxes -->
+                ${layerData.boxes.map(box => `
+                    <rect x="${box.x}" y="${box.y}" width="${box.length}" height="${box.width}" 
+                          fill="${box.color}" fill-opacity="0.7" stroke="#333" stroke-width="1" />
+                `).join('')}
+            </svg>
+        </div>
+        <div class="visualization-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3a86ff;"></div>
+                <div class="legend-label">Kontainer (${containerLength} × ${containerWidth} cm)</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: ${layerData.boxes[0]?.color || '#4cc9f0'};"></div>
+                <div class="legend-label">MC (${layerData.boxes[0]?.length || 0} × ${layerData.boxes[0]?.width || 0} cm)</div>
+            </div>
+        </div>
+    `;
+}
+
+// Show all layers visualization
+function showAllLayersVisualization() {
+    const containerWidth = parseFloat(containerWidth.value);
+    const containerLength = parseFloat(containerLength.value);
+    const containerHeight = parseFloat(containerHeight.value);
+    
+    visualizationContainer.innerHTML = `
+        <div class="visualization-header">
+            <h3>Semua Sap (Total ${totalLayers} Sap)</h3>
+        </div>
+        <div class="visualization-2d-container">
+            <svg class="visualization-svg" viewBox="0 0 ${containerLength} ${containerHeight}">
+                <!-- Container outline -->
+                <rect x="0" y="0" width="${containerLength}" height="${containerHeight}" 
+                      fill="none" stroke="#3a86ff" stroke-width="2" stroke-dasharray="5,5" />
+                
+                <!-- Boxes - stacked vertically -->
+                ${layersData.map(layer => layer.boxes.map(box => `
+                    <rect x="${box.x}" y="${box.z}" width="${box.length}" height="${box.height}" 
+                          fill="${box.color}" fill-opacity="0.7" stroke="#333" stroke-width="1" />
+                `).join('')).join('')}
+            </svg>
+        </div>
+        <div class="visualization-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3a86ff;"></div>
+                <div class="legend-label">Kontainer (${containerLength} × ${containerHeight} cm)</div>
+            </div>
+            ${layersData.slice(0, 3).map((layer, i) => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${layer.boxes[0]?.color || '#4cc9f0'};"></div>
+                    <div class="legend-label">Sap ${layer.layer} (${layer.count} MC)</div>
+                </div>
+            `).join('')}
+            ${totalLayers > 3 ? `
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #888;"></div>
+                    <div class="legend-label">+ ${totalLayers - 3} sap lainnya</div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// Show visualization based on current mode
+function showVisualization(results) {
+    if (showAllLayers.checked) {
+        showAllLayersVisualization();
+    } else {
+        showSpecificLayer(1);
+    }
+}
+
+// Initialize Three.js for 3D visualization
+function initThreeJS() {
+    // Clear previous scene if exists
+    if (scene) {
+        threejsContainer.innerHTML = '';
+        boxes = [];
+    }
+    
+    // Create scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf8fafc);
-
-    // Camera
-    camera = new THREE.PerspectiveCamera(75, threejsContainer.clientWidth / 500, 0.1, 1000);
-    camera.position.set(50, 50, 50);
-
-    // Renderer
+    scene.background = new THREE.Color(0xf0f0f0);
+    
+    // Create camera
+    camera = new THREE.PerspectiveCamera(75, threejsContainer.clientWidth / threejsContainer.clientHeight, 0.1, 1000);
+    camera.position.set(2, 2, 2);
+    
+    // Create renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(threejsContainer.clientWidth, 500);
-    renderer.shadowMap.enabled = true;
+    renderer.setSize(threejsContainer.clientWidth, threejsContainer.clientHeight);
     threejsContainer.appendChild(renderer.domElement);
-
-    // Controls
+    
+    // Add controls
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    controls.dampingFactor = 0.25;
+    
+    // Add lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
-
+    
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(50, 50, 25);
-    directionalLight.castShadow = true;
+    directionalLight.position.set(1, 1, 1);
     scene.add(directionalLight);
-
-    // Create container
-    createContainer3D();
     
-    // Create boxes
-    createBoxes3D();
-
+    // Add axes helper
+    const axesHelper = new THREE.AxesHelper(5);
+    scene.add(axesHelper);
+    
+    // Handle window resize
+    window.addEventListener('resize', onWindowResize);
+    
     // Start animation loop
-    animate3D();
+    animate();
 }
 
-function createContainer3D() {
-    const { containerDimensions } = calculationResults;
-    const geometry = new THREE.BoxGeometry(
-        containerDimensions.length / 10,
-        containerDimensions.height / 10,
-        containerDimensions.width / 10
+// Render 3D visualization
+function render3DVisualization(results) {
+    // Clear previous boxes
+    boxes.forEach(box => scene.remove(box));
+    boxes = [];
+    
+    // Add container wireframe
+    const containerGeometry = new THREE.BoxGeometry(
+        results.container.length / 100,
+        results.container.width / 100,
+        results.container.height / 100
     );
+    const containerEdges = new THREE.EdgesGeometry(containerGeometry);
+    const container = new THREE.LineSegments(
+        containerEdges,
+        new THREE.LineBasicMaterial({ color: 0x3a86ff, linewidth: 2 })
+    );
+    scene.add(container);
     
-    const edges = new THREE.EdgesGeometry(geometry);
-    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1e40af }));
-    scene.add(line);
-    
-    const material = new THREE.MeshPhongMaterial({ 
-        color: 0x3b82f6,
-        transparent: true,
-        opacity: 0.1,
-        side: THREE.DoubleSide
+    // Add boxes
+    results.boxes.forEach(boxData => {
+        const boxGeometry = new THREE.BoxGeometry(
+            boxData.length / 100,
+            boxData.width / 100,
+            boxData.height / 100
+        );
+        const boxMaterial = new THREE.MeshPhongMaterial({
+            color: new THREE.Color(boxData.color),
+            transparent: true,
+            opacity: parseFloat(opacitySlider.value),
+            wireframe: wireframeMode.checked
+        });
+        const boxMesh = new THREE.Mesh(boxGeometry, boxMaterial);
+        
+        // Position the box (convert cm to meters)
+        boxMesh.position.set(
+            (boxData.x + boxData.length/2) / 100 - results.container.length/200,
+            (boxData.y + boxData.width/2) / 100 - results.container.width/200,
+            (boxData.z + boxData.height/2) / 100 - results.container.height/200
+        );
+        
+        scene.add(boxMesh);
+        boxes.push(boxMesh);
     });
-    containerMesh = new THREE.Mesh(geometry, material);
-    scene.add(containerMesh);
+    
+    // Center camera on the container
+    camera.lookAt(0, 0, 0);
+    controls.update();
 }
 
-function createBoxes3D() {
-    const { optimal, boxDimensions } = calculationResults;
-    
-    boxMeshes.forEach(mesh => scene.remove(mesh));
-    boxMeshes = [];
-
-    // Simplified box creation - would use actual layout pattern in real implementation
-    for (let x = 0; x < optimal.boxesPerRow; x++) {
-        for (let y = 0; y < optimal.boxesPerCol; y++) {
-            for (let z = 0; z < optimal.layers; z++) {
-                const geometry = new THREE.BoxGeometry(
-                    boxDimensions.length / 10,
-                    boxDimensions.height / 10,
-                    boxDimensions.width / 10
-                );
-                const material = new THREE.MeshPhongMaterial({ 
-                    color: 0x3b82f6,
-                    transparent: true,
-                    opacity: 0.8
-                });
-                const box = new THREE.Mesh(geometry, material);
-                box.position.set(
-                    (z * boxDimensions.length / 10) + (boxDimensions.length / 20),
-                    (y * boxDimensions.height / 10) + (boxDimensions.height / 20),
-                    (x * boxDimensions.width / 10) + (boxDimensions.width / 20)
-                );
-                box.castShadow = true;
-                scene.add(box);
-                boxMeshes.push(box);
-            }
-        }
-    }
-}
-
-function animate3D() {
-    if (currentVisualizationMode !== '3d') return;
-    
-    animationId = requestAnimationFrame(animate3D);
+// Animation loop
+function animate() {
+    requestAnimationFrame(animate);
     controls.update();
     renderer.render(scene, camera);
 }
 
-function cleanup3D() {
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-    }
-    
-    if (renderer) {
-        const threejsContainer = document.getElementById('threejs-container');
-        if (threejsContainer.contains(renderer.domElement)) {
-            threejsContainer.removeChild(renderer.domElement);
-        }
-        renderer.dispose();
-        renderer = null;
-    }
-    
-    if (scene) {
-        boxMeshes.forEach(mesh => scene.remove(mesh));
-        boxMeshes = [];
-        if (containerMesh) {
-            scene.remove(containerMesh);
-            containerMesh = null;
-        }
-        scene = null;
-    }
-    
-    camera = null;
-    controls = null;
-    
-    document.getElementById('threejs-container').style.display = 'none';
-    document.getElementById('visualizationContainer').style.display = 'flex';
+// Handle window resize
+function onWindowResize() {
+    camera.aspect = threejsContainer.clientWidth / threejsContainer.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(threejsContainer.clientWidth, threejsContainer.clientHeight);
 }
 
-function create2DVisualization() {
-    const container = document.getElementById('visualizationContainer');
-    const { optimal, containerDimensions, boxDimensions } = calculationResults;
+// Toggle 3D visualization
+function toggle3DVisualization() {
+    is3DModeActive = !is3DModeActive;
     
-    container.innerHTML = `
-        <div class="svg-container">
-            <svg viewBox="0 0 800 500" class="visualization-svg">
-                <rect width="100%" height="100%" fill="#f1f5f9" rx="12" />
-                
-                <!-- Container -->
-                <rect x="100" y="100" width="600" height="300" 
-                      fill="rgba(59, 130, 246, 0.1)" stroke="#3b82f6" stroke-width="4" rx="12" />
-                
-                <!-- Boxes -->
-                ${Array.from({ length: optimal.boxesPerRow }).map((_, x) => 
-                    Array.from({ length: optimal.boxesPerCol }).map((_, y) => `
-                        <rect x="${100 + x * (600 / optimal.boxesPerRow)}" 
-                              y="${100 + y * (300 / optimal.boxesPerCol)}" 
-                              width="${600 / optimal.boxesPerRow}" 
-                              height="${300 / optimal.boxesPerCol}" 
-                              fill="#3b82f6" fill-opacity="0.7" rx="6" />
-                    `).join('')
-                ).join('')}
-                
-                <!-- Labels -->
-                <text x="400" y="80" text-anchor="middle" font-family="Inter" font-weight="600" fill="#1e293b">
-                    Kontainer ${containerDimensions.width} × ${containerDimensions.height} cm
-                </text>
-                <text x="400" y="440" text-anchor="middle" font-family="Inter" font-size="14" fill="#64748b">
-                    Tampak Belakang • Volume: ${((containerDimensions.length * containerDimensions.width * containerDimensions.height) / 1000000).toFixed(2)} m³
-                </text>
-            </svg>
-            
-            <div class="svg-controls">
-                <div class="svg-stats">
-                    <div>📦 ${optimal.boxesPerLayer} kotak di sap ini</div>
-                    <div>🎯 ${optimal.efficiency}% efisiensi</div>
-                    <div>📏 Kedalaman: 0-${optimal.layers * boxDimensions.length} cm</div>
-                </div>
-                <button class="svg-refresh-btn" onclick="create2DVisualization()">
-                    🔄 Refresh
-                </button>
-            </div>
-        </div>
-    `;
-}
-
-function setupLayerControls() {
-    if (!calculationResults) return;
-    
-    const { optimal } = calculationResults;
-    
-    // Show layer controls
-    document.getElementById('layerControls').style.display = 'block';
-    
-    // Setup layer slider
-    const layerSlider = document.getElementById('layerSlider');
-    const layerDisplay = document.getElementById('layerDisplay');
-    layerSlider.max = optimal.layers;
-    layerDisplay.textContent = `1 / ${optimal.layers}`;
-    
-    // Create layer tabs
-    const layerTabs = document.getElementById('layerTabs');
-    layerTabs.innerHTML = '';
-    
-    for (let i = 1; i <= optimal.layers; i++) {
-        const tab = document.createElement('button');
-        tab.className = `layer-tab ${i === 1 ? 'active' : ''}`;
-        tab.textContent = `Sap ${i}`;
-        tab.onclick = () => selectLayer(i);
-        layerTabs.appendChild(tab);
-    }
-}
-
-function selectLayer(layerNum) {
-    // Update slider
-    document.getElementById('layerSlider').value = layerNum;
-    document.getElementById('layerDisplay').textContent = `${layerNum} / ${calculationResults.optimal.layers}`;
-    
-    // Update active tab
-    document.querySelectorAll('.layer-tab').forEach((tab, index) => {
-        if (index + 1 === layerNum) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-    
-    // Update visualization
-    if (currentVisualizationMode === '3d') {
-        createBoxes3D();
+    if (is3DModeActive) {
+        initThreeJS();
+        const results = getCurrentResults(); // You would need to implement this
+        if (results) render3DVisualization(results);
+        threejsContainer.style.display = 'block';
+        visualizationContainer.style.display = 'none';
     } else {
-        create2DVisualization();
+        threejsContainer.style.display = 'none';
+        visualizationContainer.style.display = 'block';
     }
 }
 
-function showSpecificLayer(layerNum) {
-    document.getElementById('layerDisplay').textContent = `${layerNum} / ${calculationResults.optimal.layers}`;
-    selectLayer(parseInt(layerNum));
-}
-
-function toggleLayerMode() {
-    const showAll = document.getElementById('showAllLayers').checked;
-    
-    if (showAll) {
-        document.getElementById('layerSlider').disabled = true;
-        document.querySelectorAll('.layer-tab').forEach(tab => {
-            tab.disabled = true;
-        });
-    } else {
-        document.getElementById('layerSlider').disabled = false;
-        document.querySelectorAll('.layer-tab').forEach(tab => {
-            tab.disabled = false;
-        });
-    }
-    
-    // Update visualization
-    if (currentVisualizationMode === '3d') {
-        createBoxes3D();
-    } else {
-        create2DVisualization();
-    }
-}
-
+// Reset camera view
 function resetCamera() {
-    if (camera && controls) {
-        camera.position.set(50, 50, 50);
+    if (controls) {
         controls.reset();
-        showAlert('Kamera direset ke posisi default', 'info');
+        camera.position.set(2, 2, 2);
+        camera.lookAt(0, 0, 0);
     }
 }
 
+// Toggle wireframe mode
 function toggleWireframe() {
-    const wireframe = document.getElementById('wireframeMode').checked;
-    
-    boxMeshes.forEach(mesh => {
-        mesh.material.wireframe = wireframe;
+    boxes.forEach(box => {
+        box.material.wireframe = wireframeMode.checked;
     });
-    
-    showAlert(wireframe ? 'Mode wireframe aktif' : 'Mode solid aktif', 'info');
 }
 
+// Update box opacity
 function updateOpacity(value) {
-    document.getElementById('opacityValue').textContent = value;
-    
-    boxMeshes.forEach(mesh => {
-        mesh.material.opacity = parseFloat(value);
+    opacityValue.textContent = value;
+    boxes.forEach(box => {
+        box.material.opacity = parseFloat(value);
     });
 }
 
-// Window resize handler
-window.addEventListener('resize', function() {
-    if (renderer && camera) {
-        const threejsContainer = document.getElementById('threejs-container');
-        camera.aspect = threejsContainer.clientWidth / 500;
-        camera.updateProjectionMatrix();
-        renderer.setSize(threejsContainer.clientWidth, 500);
-    }
-});
+// Helper function to get random color
+function getRandomColor() {
+    const colors = [
+        '#4cc9f0', '#4895ef', '#4361ee', '#3f37c9', 
+        '#f72585', '#b5179e', '#7209b7', '#560bad',
+        '#3a0ca3', '#480ca8', '#3a86ff', '#8338ec'
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
+
+// Helper function to get current results (for demo purposes)
+function getCurrentResults() {
+    const container = {
+        length: parseFloat(containerLength.value) || 1158,
+        width: parseFloat(containerWidth.value) || 228,
+        height: parseFloat(containerHeight.value) || 252
+    };
+    
+    const box = {
+        length: parseFloat(boxLength.value) || 60,
+        width: parseFloat(boxWidth.value) || 40,
+        height: parseFloat(boxHeight.value) || 30
+    };
+    
+    return calculateBoxPlacement(
+        container, 
+        box, 
+        document.querySelector('input[name="layoutPattern"]:checked').value,
+        allowRotation.checked
+    );
+}
