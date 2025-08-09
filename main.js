@@ -152,7 +152,7 @@ const ContainerCalculator = (function() {
 
     function validateInputs(boxL, boxW, boxH) {
         if (!boxL || !boxW || !boxH || boxL <= 0 || boxW <= 0 || boxH <= 0) {
-            showAlert('Mohon isi semua ukuran kotak dengan benar!', 'error');
+            showAlert('Mohon isi semua ukuran MC dengan benar!', 'error');
             return false;
         }
         return true;
@@ -517,7 +517,7 @@ const ContainerCalculator = (function() {
                     </div>
                     <div class="text-center jiffy-bounce jiffy-stagger-3">
                         <div class="text-2xl font-bold text-gray-700">${optimal.boxesPerLayer}</div>
-                        <div class="text-sm font-semibold text-gray-600">Kotak per Sap</div>
+                        <div class="text-sm font-semibold text-gray-600">MC per Sap</div>
                     </div>
                     <div class="text-center jiffy-bounce jiffy-stagger-4">
                         <div class="text-2xl font-bold text-gray-700">${optimal.layers}</div>
@@ -545,7 +545,7 @@ const ContainerCalculator = (function() {
                         <div class="text-2xl font-bold text-red-600">${(metrics.wastedSpace / 1000000).toFixed(2)} m³</div>
                     </div>
                     <div class="metric-card p-4 rounded-xl jiffy-hover-lift jiffy-fade-in jiffy-stagger-4">
-                        <div class="text-gray-600 font-semibold mb-1">Kotak per m³</div>
+                        <div class="text-gray-600 font-semibold mb-1">MC per m³</div>
                         <div class="text-2xl font-bold text-purple-600">${(optimal.totalBoxes / (metrics.containerVolume / 1000000)).toFixed(0)}</div>
                     </div>
                 </div>
@@ -1213,7 +1213,7 @@ const ContainerCalculator = (function() {
                         <g transform="translate(40, 40)">
                             <text x="0" y="0" class="${isMobile ? 'text-xs' : 'text-sm'} font-semibold fill-slate-300" 
                                   style="font-family: 'Inter', sans-serif;">
-                                📦 ${showAllLayers ? `${optimal.totalBoxes} kotak (${optimal.boxesPerLayer} per sap)` : `${optimal.boxesPerLayer} kotak di sap ini`}
+                                📦 ${showAllLayers ? `${optimal.totalBoxes} MC (${optimal.boxesPerLayer} per sap)` : `${optimal.boxesPerLayer} MC di sap ini`}
                             </text>
                             
                             <text x="${(svgWidth - 80) / 3}" y="0" class="${isMobile ? 'text-xs' : 'text-sm'} font-semibold fill-slate-300" 
@@ -1258,7 +1258,7 @@ const ContainerCalculator = (function() {
                     </div>
                     ` : `
                     <div class="flex items-center gap-2 text-slate-300 text-sm">
-                        <span>💡 Tips: Hover kotak untuk detail, gunakan layer controls untuk navigasi</span>
+                        <span>💡 Tips: Hover MC untuk detail, gunakan layer controls untuk navigasi</span>
                     </div>
                     `}
                 </div>
